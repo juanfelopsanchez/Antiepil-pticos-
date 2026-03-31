@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Quiz Antiepilépticos</title>
+<style>
+body { font-family: Arial; background:#f5f5f5; text-align:center; }
+.container { max-width:600px; margin:auto; background:white; padding:20px; border-radius:10px; }
+button { padding:10px; margin:5px; }
+.correct { color:green; }
+.incorrect { color:red; }
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<h2>Quiz Antiepilépticos</h2>
+
+<div id="start">
+<input id="name" placeholder="Tu nombre">
+<button id="startBtn">Iniciar</button>
+</div>
+
+<div id="quiz" style="display:none;">
+<p id="progress"></p>
+<p id="timer"></p>
+<p id="question"></p>
+
+<input id="answer">
+<br>
+<button id="submit">Responder</button>
+<button id="skip">No estoy seguro</button>
+
+<p id="feedback"></p>
+<button id="next" style="display:none;">Siguiente</button>
+</div>
+
+<div id="result" style="display:none;"></div>
+
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+
+let questions = [
+{q:"Fármaco que bloquea canales de sodio dependientes de voltaje, estabiliza membrana neuronal y se usa en crisis tónico-clónicas", a:["fenitoina","fenitoína"]},
+{q:"Fármaco que aumenta GABA inhibiendo GABA transaminasa y se usa en epilepsia generalizada", a:["acido valproico","valproato"]},
+{q:"Benzodiacepina que potencia GABA-A aumentando frecuencia de apertura del canal y se usa en status epilepticus", a:["diazepam"]},
+{q:"Fármaco que bloquea canales de calcio tipo T en tálamo, usado en crisis de ausencia", a:["etosuximida"]},
+{q:"Fármaco que modula GABA y también bloquea sodio, usado ampliamente en epilepsia", a:["acido valproico","valproato"]},
+{q:"Fármaco que inhibe liberación de glutamato y bloquea canales de sodio, usado en crisis parciales", a:["lamotrigina"]},
+{q:"Fármaco que se une a subunidad alfa2delta de canales de calcio, usado en epilepsia y dolor neuropático", a:["gabapentina"]},
+{q:"Fármaco similar a gabapentina con mejor biodisponibilidad", a:["pregabalina"]},
+{q:"Fármaco que potencia GABA y produce sedación, usado como antiepiléptico clásico", a:["fenobarbital"]},
+{q:"Fármaco que inhibe canales de sodio y se usa también en neuralgia del trigémino", a:["carbamazepina"]},
+{q:"Fármaco que es profármaco de carbamazepina", a:["oxcarbazepina"]},
+{q:"Fármaco que inhibe anhidrasa carbónica y se usa como adyuvante en epilepsia", a:["topiramato"]},
+{q:"Fármaco que inhibe GABA transaminasa aumentando GABA, usado en epilepsia refractaria", a:["vigabatrina"]},
+{q:"Fármaco que bloquea AMPA/kainato reduciendo excitación neuronal", a:["perampanel"]},
+{q:"Fármaco que modula SV2A reduciendo liberación de neurotransmisores", a:["levetiracetam"]},
+{q:"Fármaco que puede causar hiperplasia gingival como efecto adverso", a:["fenitoina","fenitoína"]},
+{q:"Fármaco asociado a defectos del tubo neural en embarazo", a:["acido valproico","valproato"]},
+{q:"Fármaco que puede causar síndrome de Stevens-Johnson", a:["lamotrigina","carbamazepina"]},
+{q:"Fármaco que potencia GABA aumentando duración de apertura del canal", a:["fenobarbital"]},
+{q:"Fármaco útil en crisis de ausencia y tónico-clónicas por acción múltiple", a:["acido valproico","valproato"]},
+{q:"Fármaco que actúa sobre sodio y se usa en epilepsia parcial", a:["carbamazepina"]},
+{q:"Fármaco que puede producir sedación intensa por acción GABAérgica", a:["fenobarbital","diazepam"]},
+{q:"Fármaco que disminuye liberación de glutamato y aspartato", a:["lamotrigina"]},
+{q:"Fármaco que se usa en status epilepticus por acción rápida", a:["diazepam","lorazepam"]}
+];
+
+let selected = [];
+let index = 0;
+let score = 0;
+let timer;
+let timeLeft = 60;
+let answered = false;
+let history = [];
+
+function normalize(text){
+return text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+}
+
+function startQuiz(){
+let name = document.getElementById("name").value;
+if(!name) return alert("Ingresa tu nombre");
+
+localStorage.setItem("name", name);
+
+selected = questions.sort(()=>0.5-Math.random()).slice(0,10);
+index = 0;
+score = 0;
+
+document.getElementById("start").style.display="none";
+document.getElementById("quiz").style.display="block";
+
+loadQuestion();
+}
+
+function loadQuestion(){
+answered = false;
+timeLeft = 60;
+
+document.getElementById("answer").value="";
+document.getElementById("feedback").innerHTML="";
+document.getElementById("next").style.display="none";
+
+document.getElementById("progress").innerText=`Pregunta ${index+1}/10`;
+document.getElementById("question").innerText=selected[index].q;
+
+startTimer();
+}
+
+function startTimer(){
+clearInterval(timer);
+timer = setInterval(()=>{
+timeLeft--;
+document.getElementById("timer").innerText=`Tiempo: ${timeLeft}s`;
+
+if(timeLeft<=0){
+clearInterval(timer);
+handleAnswer(null,true);
+}
+},1000);
+}
+
+function handleAnswer(userAnswer, timeout=false){
+if(answered) return;
+answered = true;
+clearInterval(timer);
+
+let correctAnswers = selected[index].a.map(a=>normalize(a));
+let user = normalize(userAnswer || "");
+
+let isCorrect = correctAnswers.includes(user);
+
+let points = isCorrect ? Math.round((timeLeft/60)*10) : 0;
+score += points;
+
+let feedback = "";
+
+if(timeout){
+feedback = `❌ Tiempo agotado (0 pts)<br>Respuesta: ${correctAnswers[0]}`;
+}else if(userAnswer===null){
+feedback = `❌ 0 pts<br>Respuesta: ${correctAnswers[0]}`;
+}else if(isCorrect){
+feedback = `✅ Correcto (+${points})`;
+}else{
+feedback = `❌ Incorrecto (0 pts)<br>Respuesta: ${correctAnswers[0]}`;
+}
+
+document.getElementById("feedback").innerHTML=feedback;
+document.getElementById("next").style.display="block";
+
+}
+
+function nextQuestion(){
+index++;
+if(index<10){
+loadQuestion();
+}else{
+endQuiz();
+}
+}
+
+function endQuiz(){
+document.getElementById("quiz").style.display="none";
+document.getElementById("result").style.display="block";
+
+let name = localStorage.getItem("name");
+let record = {name, score, date:new Date().toISOString()};
+let history = JSON.parse(localStorage.getItem("history")||"[]");
+history.push(record);
+localStorage.setItem("history", JSON.stringify(history));
+
+document.getElementById("result").innerHTML = `
+<h3>Puntaje: ${score}/100</h3>
+<button onclick="location.reload()">Reintentar</button>
+`;
+}
+
+document.getElementById("startBtn").addEventListener("click", startQuiz);
+document.getElementById("submit").addEventListener("click", ()=>handleAnswer(document.getElementById("answer").value));
+document.getElementById("skip").addEventListener("click", ()=>handleAnswer(null));
+document.getElementById("next").addEventListener("click", nextQuestion);
+
+});
+</script>
+
+</body>
+</html>
